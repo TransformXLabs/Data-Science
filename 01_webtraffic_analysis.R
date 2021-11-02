@@ -1,4 +1,7 @@
-
+# BUSINESS SCIENCE ----
+# LEARNING LAB 67 ----
+# SPARK & MODELTIME ----
+# **** ----
 
 # LIBRARIES ----
 
@@ -14,7 +17,7 @@ library(janitor)
 # MAIN DATA ----
 
 google_analytics_tbl <- read_rds("data/google_analytics_by_page_daily.rds") %>%
-  clean_names
+  clean_names()
 
 google_analytics_tbl
 
@@ -84,7 +87,10 @@ google_analytics_filtered_tbl %>%
 
 # DATA PREPARATION ----
 
-nested_data_tbl <- google_analytics_filtered_tbl %>%
+# data_set <- google_analytics_tbl # Run this one to do all 20 websites!
+data_set <- google_analytics_filtered_tbl # Used in the tutorial to speed things up
+
+nested_data_tbl <- data_set %>%
   select(date, page_path, page_views) %>%
   group_by(page_path) %>%
   
@@ -151,6 +157,8 @@ wflw_ets_smooth %>% fit(extract_nested_train_split(nested_data_tbl))
 
 # * Smooth: ADAM 
 
+show_engines('adam_reg')
+
 wflw_adam <- workflow() %>%
   add_model(adam_reg() %>% set_engine("auto_adam")) %>%
   add_recipe(rec_prophet)
@@ -162,16 +170,25 @@ wflw_adam %>% fit(extract_nested_train_split(nested_data_tbl))
 
 conf <- list()
 conf$`sparklyr.cores.local` <- 12
-conf$`sparklyr.shell.driver-memory` <- "16G"
+conf$`sparklyr.shell.driver-memory` <- "32G"
 conf$spark.memory.fraction <- 0.9
 
-sc <- sparklyr::spark_connect(master = "local[12]", config = conf)
+sc <- sparklyr::spark_connect(master = "local", config = conf)
 
 spark_web(sc) # localhost:4040
 
 parallel_start(sc, .method = 'spark')
 
+# Alternatively, can parallelize without Spark by running this:
+# parallel_start(12, .method = "parallel")
+
 # PARALLEL FITTING WITH SPARK ----
+# - On 12-cores, all 20 time series takes 1.2 minutes
+
+control_nested_fit(
+  verbose  = TRUE,
+  allow_par = TRUE
+)
 
 nested_modeltime_tbl <- nested_data_tbl %>%
   modeltime_nested_fit(
@@ -187,6 +204,10 @@ nested_modeltime_tbl <- nested_data_tbl %>%
     )
   )
 
+# nested_modeltime_tbl %>% write_rds("models/nested_modeltime_tbl.rds", compress = "gz")
+
+nested_modeltime_tbl <- read_rds("models/nested_modeltime_tbl.rds")
+
 nested_modeltime_tbl %>% 
   extract_nested_error_report()
 
@@ -198,7 +219,9 @@ nested_modeltime_tbl %>%
 nested_modeltime_tbl %>%
   extract_nested_test_forecast() %>%
   group_by(page_path) %>%
-  plot_modeltime_forecast()
+  plot_modeltime_forecast(
+    # .facet_ncol = 4
+  )
 
 
 # ENSEMBLING NESTED ----
@@ -216,9 +239,8 @@ nested_modeltime_ensembles_tbl <- nested_modeltime_tbl %>%
     type    = "mean",
     control = control_nested_fit(
       verbose   = TRUE, 
-      allow_par = TRUE
+      allow_par = FALSE
     )
-    
   )
 
 nested_modeltime_ensembles_tbl %>% 
@@ -243,17 +265,20 @@ nested_modeltime_ensembles_2_tbl <- nested_modeltime_ensembles_tbl %>%
     
     control = control_nested_fit(
       verbose   = TRUE, 
-      allow_par = TRUE
+      allow_par = FALSE
     )
     
   )
 
-nested_modeltime_ensembles_2_tbl %>% extract_nested_error_report()
+nested_modeltime_ensembles_2_tbl %>%
+  extract_nested_modeltime_table(1)
 
 nested_modeltime_ensembles_2_tbl %>%
   extract_nested_test_accuracy() %>%
   group_by(page_path) %>%
   table_modeltime_accuracy()
+
+
 
 
 # SELECT BEST MODEL ----
@@ -263,21 +288,31 @@ best_nested_modeltime_tbl <- nested_modeltime_ensembles_2_tbl %>%
 
 best_nested_modeltime_tbl %>% extract_nested_modeltime_table(1)
 
+# best_nested_modeltime_tbl %>% write_rds("models/best_nested_modeltime_tbl.rds", compress = "gz")
+# best_nested_modeltime_tbl <- read_rds("models/best_nested_modeltime_tbl.rds")
 
 # REFIT AND FORECAST ----
 
+# * Run Refit on Spark ----
 nested_modeltime_refit_tbl <- best_nested_modeltime_tbl %>%
   modeltime_nested_refit(
     control = control_nested_fit(
       verbose   = TRUE,
-      allow_par = TRUE
+      allow_par = TRUE, 
+      packages = c("smooth")
     )
   )
+
+# nested_modeltime_refit_tbl %>% 
+#   write_rds("models/nested_modeltime_refit_tbl.rds", compress = "gz")
+
+nested_modeltime_refit_tbl <- read_rds("models/nested_modeltime_refit_tbl.rds")
+  
 
 nested_modeltime_refit_tbl %>%
   extract_nested_future_forecast() %>%
   group_by(page_path) %>%
-  plot_modeltime_forecast()
+  plot_modeltime_forecast(.facet_ncol = 4)
 
 
 # CONCLUSIONS ----
