@@ -259,7 +259,7 @@ nested_modeltime_ensembles_2_tbl %>%
 # SELECT BEST MODEL ----
 
 best_nested_modeltime_tbl <- nested_modeltime_ensembles_2_tbl %>%
-  modeltime_nested_select_best()
+  modeltime_nested_select_best(metric = "rmse")
 
 best_nested_modeltime_tbl %>% extract_nested_modeltime_table(1)
 
@@ -278,3 +278,24 @@ nested_modeltime_refit_tbl %>%
   extract_nested_future_forecast() %>%
   group_by(page_path) %>%
   plot_modeltime_forecast()
+
+
+# CONCLUSIONS ----
+
+# 1. Time Series - Incredibly important to businesses. 
+#  Modeltime has ability to:
+#    - Perform Iteration at Scale with Spark
+#    - Add External Regressors
+#    - Ensemble the best models
+#    - Even use lots of different models (experimentation is key)
+#  So, you should learn Modeltime! 
+
+# 2. Production is key!
+# - You're going to make analyses that 
+#   your company will want to use.
+# - But, you need to package it up in a format they can use: Shiny!
+# So, you should learn Shiny!
+
+# How are you going to do this? I have a solution. 
+
+
