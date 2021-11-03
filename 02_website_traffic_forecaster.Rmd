@@ -1,0 +1,236 @@
+---
+title: "Google Analytics Forecaster"
+output:
+    flexdashboard::flex_dashboard:
+        orientation: columns
+        theme: 
+          bootswatch: "lux"
+          bg: "white"
+          fg: "white"
+          primary: "#18bc9c"
+          secondary: "#18bc9c"
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+    echo    = FALSE,
+    message = FALSE,
+    warning = FALSE
+)
+
+library(shiny)
+library(shinyjs)
+
+library(modeltime)
+library(modeltime.ensemble)
+library(tidymodels)
+
+library(tidyverse)
+library(timetk)
+library(lubridate)
+library(janitor)
+library(plotly)
+
+```
+
+``` {css}
+.chart-title {
+  background-color: black;
+  color: white;
+}
+
+.chart-stage {
+  background-color: black;
+}
+
+.section.sidebar {
+  background-color: black;
+}
+
+.navbar.navbar-inverse {
+  background-color: #18bc9c!important;
+  box-shadow: 3px 3px 5px black;
+}
+
+.navbar-dark .navbar-brand, .navbar.navbar-inverse .navbar-brand {
+  color:black;
+}
+
+.navbar.navbar-inverse ul.nav.navbar-nav>li.active>a {
+  color:black;
+}
+
+.dashboard-column {
+  background-color: black;
+}
+
+.section {
+  background-color: black;
+}
+
+body {
+  background-color:black;
+}
+
+```
+
+```{r}
+# DATA
+
+google_analytics_tbl <- read_rds("data/google_analytics_by_page_daily.rds") %>%
+  clean_names()
+
+ga_summarized_tbl <- google_analytics_tbl %>%
+  group_by(page_path) %>%
+  summarise(
+    count = n(),
+    rank  = unique(rank),
+    page_views = sum(page_views),
+    viralness = sum(page_views) / count
+  ) %>%
+  mutate(desc = str_glue("Page: {page_path}
+                          ----
+                          Rank: {rank}
+                          Count: {count}
+                          Page Views: {scales::comma(page_views)}
+                          Viralness: {round(viralness)}
+                         "))
+
+```
+
+
+
+# GA Website Traffic
+
+## Column {.sidebar}
+
+<br>
+
+__Learning Lab 67: Modeltime Spark.__
+
+
+#### What does the app do?
+
+> Forecasts Google Analytics webtraffic for 20 Web Pages 
+
+<hr>
+
+#### Controls
+
+__Use controls__ to select webpages and make the forecast.
+
+```{r}
+useShinyjs(rmd = TRUE)
+
+shiny::sliderInput(
+    inputId = "market_cap", 
+    label   = "Market Cap ($ Billions)", 
+    min     = 0.5,
+    value   = 1,
+    max     = 100, 
+    step    = 2
+)
+
+shiny::sliderInput(
+    inputId = "max_sd", 
+    label   = "Maximum Standard Deviation", 
+    min     = 0.25,
+    value   = 1,
+    max     = 5, 
+    step    = .25
+)
+    
+
+    
+actionButton(inputId = "apply", label = "Apply", icon = icon("play"))
+
+actionButton(inputId = "reset", label = "Reset", icon = icon("sync"))
+
+
+observeEvent(eventExpr = input$reset, handlerExpr = {
+  
+  updateSliderInput(
+    inputId = "market_cap",
+    value   = 1
+  )
+  
+  updateSliderInput(
+    inputId = "max_sd",
+    value   = 1
+  )
+    
+  shinyjs::delay(ms = 300, expr = {
+      shinyjs::click(id = "apply")
+  })
+ 
+  
+})
+
+
+```
+
+<hr>
+
+
+
+> Based on the 1st Shiny App Project in Shiny Predictive Dashboards Course in the [5-Course R-Track Program](https://university.business-science.io/p/5-course-bundle-machine-learning-web-apps-time-series/?coupon_code=LEARNINGLABS)
+
+Learn more at [Business Science](https://www.business-science.io/)
+
+
+```{r}
+# LOGIC
+
+```
+
+
+## Column 
+
+<br>
+
+### GA Metrics
+
+```{r}
+
+renderPlotly({
+  
+  
+  
+  g <- ga_summarized_tbl %>%
+    ggplot(aes(page_views, viralness, color = page_views, size = page_views)) +
+    geom_point(aes(text=desc), alpha = 0.5) +
+    scale_x_log10() +
+    scale_y_log10() +
+    geom_smooth(method = "lm", se = F) +
+    labs(x = "Page Views (Log10 scale)", y = "Viralness (Log10 Scale)") +
+    # scale_color_distiller(type = "seq") +
+    scale_color_gradientn(colors = c("white", "#18bc9c")) +
+    theme_minimal() +
+    scale_size(range = c(3,10))+
+    theme(
+      panel.background = element_rect(fill = "black"),
+      plot.background = element_rect(fill = "black"),
+      text = element_text(colour = "white")
+    ) 
+  
+  
+  ggplotly(g)  
+  
+  
+})
+
+```
+
+
+## Column
+
+<br>
+
+### Best Stocks
+
+```{r}
+
+
+```
+
