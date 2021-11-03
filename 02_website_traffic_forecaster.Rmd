@@ -73,6 +73,22 @@ body {
   background-color:black;
 }
 
+.selectize-dropdown {
+  background-color:black;
+}
+.selectize-input.full {
+  background-color:black;
+}
+.selectize-input, .selectize-control.single .selectize-input.input-active {
+  background-color:black;
+}
+
+
+.selectize-dropdown .active {
+  background-color: #18bc9c;
+  color: #f2f2f2;
+}
+
 ```
 
 ```{r}
@@ -96,6 +112,8 @@ ga_summarized_tbl <- google_analytics_tbl %>%
                           Page Views: {scales::comma(page_views)}
                           Viralness: {round(viralness)}
                          "))
+
+nested_modeltime_refit_tbl <- read_rds("models/nested_modeltime_refit_tbl.rds")
 
 ```
 
@@ -123,46 +141,31 @@ __Use controls__ to select webpages and make the forecast.
 ```{r}
 useShinyjs(rmd = TRUE)
 
-shiny::sliderInput(
-    inputId = "market_cap", 
-    label   = "Market Cap ($ Billions)", 
-    min     = 0.5,
-    value   = 1,
-    max     = 100, 
-    step    = 2
+shiny::selectInput(
+  inputId = "page_path",
+  label = "Page Path",
+  selected = "/",
+  choices = ga_summarized_tbl$page_path,
+  selectize = TRUE
+  
+  
 )
 
-shiny::sliderInput(
-    inputId = "max_sd", 
-    label   = "Maximum Standard Deviation", 
-    min     = 0.25,
-    value   = 1,
-    max     = 5, 
-    step    = .25
-)
-    
-
-    
-actionButton(inputId = "apply", label = "Apply", icon = icon("play"))
+# actionButton(inputId = "apply", label = "Apply", icon = icon("play"))
 
 actionButton(inputId = "reset", label = "Reset", icon = icon("sync"))
 
 
 observeEvent(eventExpr = input$reset, handlerExpr = {
   
-  updateSliderInput(
-    inputId = "market_cap",
-    value   = 1
+  updateSelectInput(
+    inputId = "page_path",
+    selected = "/"
   )
-  
-  updateSliderInput(
-    inputId = "max_sd",
-    value   = 1
-  )
-    
-  shinyjs::delay(ms = 300, expr = {
-      shinyjs::click(id = "apply")
-  })
+
+  # shinyjs::delay(ms = 300, expr = {
+  #     shinyjs::click(id = "apply")
+  # })
  
   
 })
@@ -182,6 +185,11 @@ Learn more at [Business Science](https://www.business-science.io/)
 ```{r}
 # LOGIC
 
+
+
+
+
+
 ```
 
 
@@ -195,11 +203,17 @@ Learn more at [Business Science](https://www.business-science.io/)
 
 renderPlotly({
   
+  req(ga_summarized_tbl)
   
+  filtered_df <- ga_summarized_tbl %>%
+    filter(page_path %in% input$page_path)
   
   g <- ga_summarized_tbl %>%
     ggplot(aes(page_views, viralness, color = page_views, size = page_views)) +
     geom_point(aes(text=desc), alpha = 0.5) +
+    
+    geom_point(size = 11, shape = 1, color = "red", data = filtered_df) +
+    
     scale_x_log10() +
     scale_y_log10() +
     geom_smooth(method = "lm", se = F) +
@@ -227,10 +241,53 @@ renderPlotly({
 
 <br>
 
-### Best Stocks
+### Page Views (Forecast)
 
 ```{r}
-
+renderPlotly({
+  
+  req(nested_modeltime_refit_tbl)
+  
+  df_filtered <- nested_modeltime_refit_tbl %>%
+    extract_nested_future_forecast() %>%
+    
+    filter(page_path %in% input$page_path)
+  
+  if (nrow(df_filtered) == 0) {
+    # If data wasn't forecasted (because of problem)
+    
+    df <- google_analytics_tbl %>%
+      filter(page_path %in% input$page_path)
+    
+    wflw <- workflow() %>%
+      add_model(window_reg(window_size = 1)) %>%
+      add_recipe(recipe(page_views ~ date, df)) %>%
+      fit(df)
+    
+    fcast_tbl <- modeltime_table(wflw) %>%
+      modeltime_forecast(h = 28, actual_data = df)
+    
+    g <- fcast_tbl %>%
+      plot_modeltime_forecast(.interactive = F, .legend_show = F)
+    
+    
+  } else {
+    g <- df_filtered %>%
+      plot_modeltime_forecast(.interactive = F, .legend_show = F) 
+  }
+  
+  g <- g +
+      scale_color_manual(values = c("#18bc9c", "white")) +
+      theme(
+        panel.background = element_rect(fill = "black"),
+        plot.background = element_rect(fill = "black"),
+        text = element_text(colour = "white"),
+        legend.background = element_rect(fill="black")
+      ) +
+      labs(title = str_glue("Page Path: {input$page_path}"))
+  
+  ggplotly(g)  
+})
 
 ```
 
