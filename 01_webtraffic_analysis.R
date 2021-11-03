@@ -3,6 +3,13 @@
 # SPARK & MODELTIME ----
 # **** ----
 
+# REQUIREMENTS ----
+# - Must have Java installed
+# - Must have sparklyr
+# - Run sparklyr::spark_install()
+
+# install.packages("modeltime", dependencies = TRUE)
+
 # LIBRARIES ----
 
 library(sparklyr)
@@ -13,6 +20,7 @@ library(tidyverse)
 library(timetk)
 library(lubridate)
 library(janitor)
+library(plotly)
 
 # MAIN DATA ----
 
@@ -49,6 +57,36 @@ webinars_extended_tbl <- webinars_tbl %>%
 
 # DATA VISUALIZATION ----
 
+# * Summary Stats (Viralness) ----
+
+ga_summarized_tbl <- google_analytics_tbl %>%
+  group_by(page_path) %>%
+  summarise(
+    count = n(),
+    rank  = unique(rank),
+    page_views = sum(page_views),
+    viralness = sum(page_views) / count
+  ) %>%
+  mutate(desc = str_glue("Page: {page_path}
+                          ----
+                          Rank: {rank}
+                          Count: {count}
+                          Page Views: {scales::comma(page_views)}
+                          Viralness: {round(viralness)}
+                         "))
+
+g <- ga_summarized_tbl %>%
+  ggplot(aes(page_views, viralness, color = page_views, size = page_views)) +
+  geom_point(aes(text=desc), alpha = 0.5) +
+  scale_x_log10() +
+  scale_y_log10() +
+  geom_smooth(method = "lm", se = F) +
+  labs(x = "Page Views (Log10 scale)", y = "Viralness (Log10 Scale)") 
+
+ggplotly(g) 
+
+# * TOP N ----
+
 n <- 4
 
 top_pages <- google_analytics_tbl %>%
@@ -71,8 +109,10 @@ google_analytics_filtered_tbl %>%
 # * Plot Regressors ----
 google_analytics_filtered_tbl %>%
   select(date, page_path, page_views) %>%
+  
   mutate(is_product_launch = date %in% product_events_extended_tbl$date %>% as.numeric()) %>%
   mutate(is_webinar = date %in% webinars_extended_tbl$date %>% as.numeric()) %>%
+  
   group_by(page_path) %>%
   plot_time_series_regression(
     .date_var = date, 
@@ -129,7 +169,7 @@ wflw_prophet <- workflow() %>%
   ) %>%
   add_recipe(rec_prophet)
 
-wflw_prophet %>% fit(extract_nested_train_split(nested_data_tbl))
+wflw_prophet %>% fit(extract_nested_train_split(nested_data_tbl, 1))
 
 # * XGBoost ----
 
@@ -155,7 +195,7 @@ wflw_ets_smooth <- workflow() %>%
 
 wflw_ets_smooth %>% fit(extract_nested_train_split(nested_data_tbl))
 
-# * Smooth: ADAM 
+# * Smooth: ADAM -----
 
 show_engines('adam_reg')
 
@@ -175,6 +215,8 @@ conf$spark.memory.fraction <- 0.9
 
 sc <- sparklyr::spark_connect(master = "local", config = conf)
 
+# sc <- sparklyr::spark_connect(method = "databricks")
+
 spark_web(sc) # localhost:4040
 
 parallel_start(sc, .method = 'spark')
@@ -187,7 +229,8 @@ parallel_start(sc, .method = 'spark')
 
 control_nested_fit(
   verbose  = TRUE,
-  allow_par = TRUE
+  allow_par = TRUE,
+  packages = "smooth"
 )
 
 nested_modeltime_tbl <- nested_data_tbl %>%
@@ -200,7 +243,8 @@ nested_modeltime_tbl <- nested_data_tbl %>%
     ),
     control    = control_nested_fit(
       verbose  = TRUE,
-      allow_par = TRUE
+      allow_par = TRUE,
+      packages = "smooth"
     )
   )
 
@@ -286,7 +330,7 @@ nested_modeltime_ensembles_2_tbl %>%
 best_nested_modeltime_tbl <- nested_modeltime_ensembles_2_tbl %>%
   modeltime_nested_select_best(metric = "rmse")
 
-best_nested_modeltime_tbl %>% extract_nested_modeltime_table(1)
+best_nested_modeltime_tbl %>% extract_nested_modeltime_table(3)
 
 # best_nested_modeltime_tbl %>% write_rds("models/best_nested_modeltime_tbl.rds", compress = "gz")
 # best_nested_modeltime_tbl <- read_rds("models/best_nested_modeltime_tbl.rds")
