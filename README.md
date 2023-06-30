@@ -77,6 +77,8 @@ source ~/.zshrc
 echo $OPENAI_API_KEY
 ```
 
-Make sure to open a NEW TERMINAL WINDOW after setting the environment variable.
+# Troubleshooting
+
+Make sure to quit VSCODE Application so the environment variables are set correctly and recognized.
 
 Then you are ready to go!
