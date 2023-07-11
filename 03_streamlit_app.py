@@ -72,9 +72,7 @@ def generate_chat_response(prompt):
     
     print(sql_query_df)
     
-    chat_response = f'''
-    {sql_query_df.to_markdown()}
-    '''
+    chat_response = st.dataframe(sql_query_df)
     
     return chat_response
 
@@ -89,35 +87,62 @@ def on_input_change():
 
 # APP ----
 
-st.title("Lead Scoring Query Chatbot")
+st.set_page_config(layout="wide")
 
-# col1, col2 = st.columns(2)
+st.title("Lead Scoring Analysis")
 
-# Storing the chat
-if 'generated' not in st.session_state:
-    st.session_state['generated'] = []
+col1, col2 = st.columns(2)
 
-if 'past' not in st.session_state:
-    st.session_state['past'] = []
+with col1:
+    st.header("Leads Scoring Data")
     
-user_input = get_text()
-
-if user_input:
-    output = generate_chat_response(user_input)
-    # store the output 
-    st.session_state.past.append(user_input)
-    st.session_state.generated.append(output)
-
-if st.session_state['generated']:
+    tab1, tab2, tab3 = st.tabs(["Leads Scored", "Products", "Transactions)"])
     
-    for i in range(len(st.session_state['generated'])-1, -1, -1):
-        message(
-            st.session_state["generated"][i], key=str(i),
-            is_table=True
-        )
-        message(
-            st.session_state['past'][i], is_user=True, 
-            key=str(i) + '_user'
-        )
-    st.button("Clear message", on_click=on_btn_click)
+    with tab1:
+        df = pd.read_sql_table('leads_scored', conn)
+        st.dataframe(df)
+    
+    with tab2:
+        df = pd.read_sql_table('products', conn)
+        st.dataframe(df)
+    
+    with tab3:
+        df = pd.read_sql_table('transactions', conn)
+        st.dataframe(df)
+    
+with col2:
+    
+    st.header("Ask me anything about the lead scoring data")
+
+    # Storing the chat
+    if 'generated' not in st.session_state:
+        st.session_state['generated'] = []
+
+    if 'past' not in st.session_state:
+        st.session_state['past'] = []
+        
+    user_input = get_text()
+
+    if user_input:
+        output = generate_chat_response(user_input)
+        # store the output 
+        st.session_state.past.append(user_input)
+        st.session_state.generated.append(output)
+
+    if st.session_state['generated']:
+        
+        for i in range(len(st.session_state['generated'])-1, -1, -1):
+            message(
+                st.session_state["generated"][i], 
+                key=str(i),
+                is_table=False,
+                allow_html=True
+            )
+            message(
+                st.session_state['past'][i], 
+                is_user=True, 
+                key=str(i) + '_user',
+                allow_html=True
+            )
+        st.button("Clear message", on_click=on_btn_click)
 
