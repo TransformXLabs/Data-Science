@@ -53,9 +53,15 @@ Verify lab_84_langchain is active
 
 The openai api is NOT a free service. There are costs associated with using the API.
 
+
 ## Create an OpenAI Account & Get an API Key
 
 https://platform.openai.com/account/api-keys
+
+## Cost Management
+
+
+https://platform.openai.com/account/usage
 
 ## Set the API Key as an Environment Variable
 

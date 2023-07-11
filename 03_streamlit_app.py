@@ -64,39 +64,32 @@ def generate_chat_response(prompt):
     # Generate the response
     res = sql_chain_with_steps(prompt)
     
-    # chat_response = f"""
-    # {res['result']}
-    # """
+    chatbot_response = res['result']
+    chatbot_sql_code = res['intermediate_steps'][1]
+    chatbot_sql_query_df = pd.read_sql_query(sql.text(chatbot_sql_code), conn)
     
-    sql_query_df = pd.read_sql_query(sql.text(res['intermediate_steps'][1]), conn)
+    chat_response = [
+        st.text(chatbot_response), 
+        st.dataframe(chatbot_sql_query_df),
+        st.code(chatbot_sql_code, language='sql', line_numbers=True),
+    ]
     
-    print(sql_query_df)
-    
-    chat_response = st.dataframe(sql_query_df)
+    print(chatbot_response)
     
     return chat_response
-
-def on_btn_click():
-    del st.session_state.past[:]
-    del st.session_state.generated[:]
-    
-def on_input_change():
-    user_input = st.session_state.user_input
-    st.session_state.past.append(user_input)
-    st.session_state.generated.append("The messages from Bot\nWith new line")
 
 # APP ----
 
 st.set_page_config(layout="wide")
 
-st.title("Lead Scoring Analysis")
+st.title("Lead Scoring Analyzer")
 
 col1, col2 = st.columns(2)
 
 with col1:
     st.header("Leads Scoring Data")
     
-    tab1, tab2, tab3 = st.tabs(["Leads Scored", "Products", "Transactions)"])
+    tab1, tab2, tab3 = st.tabs(["Leads Scored", "Products", "Transactions"])
     
     with tab1:
         df = pd.read_sql_table('leads_scored', conn)
@@ -144,5 +137,4 @@ with col2:
                 key=str(i) + '_user',
                 allow_html=True
             )
-        st.button("Clear message", on_click=on_btn_click)
 

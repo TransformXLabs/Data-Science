@@ -24,22 +24,6 @@ sql_engine = sql.create_engine("sqlite:///database/leads_scored.db")
 
 conn = sql_engine.connect()
 
-# Table Names
-
-metadata = sql.MetaData()
-
-metadata.reflect(bind=sql_engine)
-
-metadata.tables.keys()
-
-# Read the tables
-
-# This table contains our predictions
-pd.read_sql_table('leads_scored', conn)
-
-pd.read_sql_table('products', conn)
-
-pd.read_sql_table('transactions', conn)
 
 # 2.0 SETTING UP AN LLM TO GENERATE SQL QUERIES
 
@@ -49,10 +33,7 @@ llm = OpenAI(
     openai_api_key = os.getenv("OPENAI_API_KEY")
 )
 
-db = SQLDatabase(
-    engine=sql_engine, 
-    metadata=metadata
-)
+db = SQLDatabase(engine=sql_engine)
 
 sql_chain = SQLDatabaseChain.from_llm(
     llm                       = llm, 
