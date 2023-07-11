@@ -27,6 +27,8 @@ pip install langchain
 pip install openai
 pip install pycaret
 pip install xgboost
+pip install streamlit
+pip install streamlit-chat
 ```
 
 
