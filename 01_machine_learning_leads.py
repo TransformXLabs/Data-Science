@@ -1,4 +1,9 @@
+# BUSINESS SCIENCE UNIVERSITY
+# LEARNING LAB 84: AI-POWERED LEAD SCORING APP
+# PART 1: MACHINE LEARNING MODEL & LEAD SCORING
+# ----
 
+# LIBRARIES -----
 
 import pandas as pd
 import sqlalchemy as sql
@@ -27,7 +32,7 @@ pd.read_sql_table('products', conn)
 
 pd.read_sql_table('transactions', conn)
 
-# 2.0 QUICK MACHINE LEARNING MODEL WITH PYCARET ----
+# 2.0 MAKE A QUICK MACHINE LEARNING MODEL WITH PYCARET ----
 
 df = pd.read_sql_table('leads_scored', conn) \
     .drop(columns=['predict', 'p0', 'p1', 'mailchimp_id'])
@@ -46,7 +51,16 @@ model_xgb = clf.create_model('xgboost')
 
 clf.predict_model(model_xgb, data = df, raw_score=True)
 
-# WE'D SAVE THIS TO OUR DATABASE ----
+# WE'D THEN SAVE THIS TO OUR DATABASE ----
 
-# Note - These predictions made with an H2O model and a lot of feature engineering
+# NOTE - These predictions are much better. They were made with an H2O model 
+# and a lot of feature engineering. 
+# This actually comes from a different program. If you'd like to hear more, 
+# I'll share the details at the end of the presentation. 
 pd.read_sql_table('leads_scored', conn) 
+
+# CONCLUSTION ----
+
+# We've built a machine learning model to predict which leads are most likely to purchase.
+# But this still doesn't make it easy for users to find the best leads.
+# That's where AI comes into play. 
