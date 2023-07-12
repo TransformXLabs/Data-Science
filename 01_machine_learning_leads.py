@@ -35,7 +35,7 @@ pd.read_sql_table('transactions', conn)
 # 2.0 MAKE A QUICK MACHINE LEARNING MODEL WITH PYCARET ----
 
 df = pd.read_sql_table('leads_scored', conn) \
-    .drop(columns=['predict', 'p0', 'p1', 'mailchimp_id'])
+    .drop(columns=['predict', 'p0', 'p1', 'mailchimp_id', 'made_purchase', 'user_full_name'])
 
 target = pd.read_sql_table('transactions', conn)['user_email'].unique()
 
@@ -59,7 +59,7 @@ clf.predict_model(model_xgb, data = df, raw_score=True)
 # I'll share the details at the end of the presentation. 
 pd.read_sql_table('leads_scored', conn) 
 
-# CONCLUSTION ----
+# CONCLUSION ----
 
 # We've built a machine learning model to predict which leads are most likely to purchase.
 # But this still doesn't make it easy for users to find the best leads.

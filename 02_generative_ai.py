@@ -47,6 +47,7 @@ db = SQLDatabase(engine=sql_engine)
 sql_chain = SQLDatabaseChain.from_llm(
     llm                       = llm, 
     db                        = db, 
+    
     verbose                   = True,
     use_query_checker         = True,
     return_intermediate_steps = False,
@@ -56,7 +57,10 @@ sql_chain = SQLDatabaseChain.from_llm(
 
 sql_chain.run("What tables are in the database?")
 
-pd.read_sql(sql.text("SELECT name FROM sqlite_master WHERE type='table';"), con=conn)
+pd.read_sql(
+    sql.text("SELECT name FROM sqlite_master WHERE type='table';"), 
+    con=conn
+)
 
 res = sql_chain.run("What are the top 5 customers based on p1 score?")
 
@@ -69,6 +73,7 @@ sql_chain_with_steps = SQLDatabaseChain.from_llm(
     db                        = db, 
     verbose                   = True,
     use_query_checker         = True,
+    
     return_intermediate_steps = True,
 )
 
