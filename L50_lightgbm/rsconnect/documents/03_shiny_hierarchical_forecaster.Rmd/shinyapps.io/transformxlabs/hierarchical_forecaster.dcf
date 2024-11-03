@@ -1,0 +1,12 @@
+name: hierarchical_forecaster
+title: hierarchical_forecaster
+username: transformxlabs
+account: transformxlabs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12808563
+bundleId: 9139476
+url: https://transformxlabs.shinyapps.io/hierarchical_forecaster/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
