@@ -1,15 +1,3 @@
-# BUSINESS SCIENCE ----
-# LEARNING LAB 67 ----
-# SPARK & MODELTIME ----
-# **** ----
-
-# REQUIREMENTS ----
-# - Must have Java installed
-# - Must have sparklyr
-# - Run sparklyr::spark_install()
-
-# install.packages("modeltime", dependencies = TRUE)
-
 # LIBRARIES ----
 
 library(sparklyr)
@@ -29,8 +17,6 @@ google_analytics_tbl <- read_rds("data/google_analytics_by_page_daily.rds") %>%
 
 google_analytics_tbl
 
-# EXTERNAL DATA ----
-# - Possible Regressors
 
 # * Product Events ----
 product_events_tbl <- read_rds("data/product_events.rds")
@@ -221,11 +207,7 @@ spark_web(sc) # localhost:4040
 
 parallel_start(sc, .method = 'spark')
 
-# Alternatively, can parallelize without Spark by running this:
-# parallel_start(12, .method = "parallel")
 
-# PARALLEL FITTING WITH SPARK ----
-# - On 12-cores, all 20 time series takes 1.2 minutes
 
 control_nested_fit(
   verbose  = TRUE,
@@ -357,24 +339,3 @@ nested_modeltime_refit_tbl %>%
   extract_nested_future_forecast() %>%
   group_by(page_path) %>%
   plot_modeltime_forecast(.facet_ncol = 4)
-
-
-# CONCLUSIONS ----
-
-# 1. Time Series - Incredibly important to businesses. 
-#  Modeltime has ability to:
-#    - Perform Iteration at Scale with Spark
-#    - Add External Regressors
-#    - Ensemble the best models
-#    - Even use lots of different models (experimentation is key)
-#  So, you should learn Modeltime! 
-
-# 2. Production is key!
-# - You're going to make analyses that 
-#   your company will want to use.
-# - But, you need to package it up in a format they can use: Shiny!
-# So, you should learn Shiny!
-
-# How are you going to do this? I have a solution. 
-
-

@@ -1,0 +1,12 @@
+name: website_traffic_forecaster
+title: website_traffic_forecaster
+username: transformxlabs
+account: transformxlabs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12809206
+bundleId: 9139628
+url: https://transformxlabs.shinyapps.io/website_traffic_forecaster/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE

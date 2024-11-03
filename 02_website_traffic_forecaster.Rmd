@@ -119,13 +119,11 @@ nested_modeltime_refit_tbl <- read_rds("models/nested_modeltime_refit_tbl.rds")
 
 
 
-# GA Website Traffic
+#
 
 ## Column {.sidebar}
 
 <br>
-
-__Learning Lab 67: Modeltime Spark.__
 
 
 #### What does the app do?
@@ -174,23 +172,6 @@ observeEvent(eventExpr = input$reset, handlerExpr = {
 ```
 
 <hr>
-
-
-
-> Based on the 1st Shiny App Project in Shiny Predictive Dashboards Course in the [5-Course R-Track Program](https://university.business-science.io/p/5-course-bundle-machine-learning-web-apps-time-series/?coupon_code=LEARNINGLABS)
-
-Learn more at [Business Science](https://www.business-science.io/)
-
-
-```{r}
-# LOGIC
-
-
-
-
-
-
-```
 
 
 ## Column 
