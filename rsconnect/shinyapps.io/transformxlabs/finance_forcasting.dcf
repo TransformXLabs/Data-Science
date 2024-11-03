@@ -1,0 +1,13 @@
+name: finance_forcasting
+title: finance_forcasting
+username: transformxlabs
+account: transformxlabs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12824657
+bundleId: 9144686
+url: https://transformxlabs.shinyapps.io/finance_forcasting/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: requirements.txt
