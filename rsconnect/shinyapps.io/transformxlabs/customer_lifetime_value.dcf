@@ -1,0 +1,12 @@
+name: customer_lifetime_value
+title: customer_lifetime_value
+username: transformxlabs
+account: transformxlabs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12824027
+bundleId: 9144527
+url: https://transformxlabs.shinyapps.io/customer_lifetime_value/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
