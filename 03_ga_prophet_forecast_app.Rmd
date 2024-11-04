@@ -1,0 +1,290 @@
+---
+title: "Google Analytics Forecast with Prophet"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+    css: ['www/mytheme.css', 'www/styles.css']
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+# LIBRARIES
+
+# Shiny
+library(flexdashboard)
+library(shiny)
+
+# Database
+library(DBI)
+library(RSQLite)
+
+# Time Series Forecasting
+library(tsibble)
+library(fable)
+library(fable.prophet)
+
+# Visualization
+library(plotly)
+library(DT)
+
+# Core
+library(tidyverse)
+library(tidyquant)
+library(lubridate)
+
+source("www/scripts/info_card.R")
+
+# DATA
+con <- dbConnect(SQLite(), "data/google_analytics.sqlite")
+ga_page_views_tbl <- tbl(con, "ga_page_views") %>% 
+    collect() %>%
+    mutate(date = as_date(date))
+dbDisconnect(con)
+
+# SETUP
+ga_page_views_summary_tbl <- ga_page_views_tbl %>%
+    group_by(pagePath) %>%
+    summarize(
+        pageViews = SUM(pageViews),
+        organicSearches = SUM(organicSearches)
+    ) 
+
+top_10_page_views_summary_tbl <- ga_page_views_summary_tbl %>%
+    arrange(desc(pageViews)) %>%
+    slice(1:10)
+
+top_10_organic_searches_summary_tbl <- ga_page_views_summary_tbl %>%
+    arrange(desc(organicSearches)) %>%
+    slice(1:10)
+
+ga_page_views_tidy_tbl <- ga_page_views_tbl %>%
+    filter(pagePath %in% c(
+        top_10_organic_searches_summary_tbl %>% pull(pagePath),
+        top_10_page_views_summary_tbl %>% pull(pagePath)
+    )) %>%
+    pivot_longer(cols = pageViews:organicSearches, names_to = "search_type") %>%
+    select(date, everything()) %>%
+    arrange(date, pagePath, search_type)
+
+# PARAMS
+page_path_options           <- ga_page_views_tidy_tbl %>% pull(pagePath) %>% unique()
+initial_page_path_selection <- page_path_options[1]
+initial_forecast_horizon    <- 30
+```
+
+Controls {.sidebar}
+----------
+
+```{r}
+br()
+div(
+    class = "text-center",
+    strong("Google Analytics Page Traffic is a key indicator of website performance and email and product conversions."),
+    "We use Prophet to analyze recent (organic and total) webpage traffic history by ga_page_path and date dimensions.",
+    hr(),
+    selectizeInput("page_path_selection",
+                   label = h4("Pick a Page to Analyze"),
+                   choices = page_path_options,
+                   selected = initial_page_path_selection, width = "100%"
+                   ),
+    sliderInput("forecast_horizon", 
+                label = h4("Enter FB Prophet Forecast Horizon"), 
+                min = 1, max = 60, step = 1, 
+                value = initial_forecast_horizon, width = "100%"),
+    actionButton("submit_button", "Submit", class = "btn-success")
+)
+
+# Setup reactive values list
+rv <- reactiveValues()
+
+# Perform Prophet Modeling
+observeEvent(input$submit_button, {
+    
+    req(input$forecast_horizon, input$page_path_selection)
+    
+    # Setup
+    page_path_selection <- input$page_path_selection
+    forecast_horizon    <- as.numeric(input$forecast_horizon)
+    
+    # Filter and tsibble conversion
+    ga_page_views_filtered_tsbl <- ga_page_views_tidy_tbl %>%
+        filter(pagePath == page_path_selection) %>%
+        as_tsibble(
+            key   = c(pagePath, search_type), 
+            index = date
+        )
+    
+    # Model Prophet (mable)
+    page_views_mable <- ga_page_views_filtered_tsbl %>%
+        model(
+            PROPHET = prophet(log(value) ~ season(period = "week"))
+        )
+    
+    # Make predictions (fable)
+    page_views_fable <- page_views_mable %>% forecast(h = forecast_horizon)
+    
+    # Convert to tibble 
+    train_tbl <- ga_page_views_filtered_tsbl %>% 
+        as_tibble() %>% 
+        mutate(.mean = value) %>% 
+        select(-value)
+    
+    future_tbl <- page_views_fable %>%
+        mutate(
+            lo_95 = quantile(value, 0.025),
+            hi_95 = quantile(value, 0.975)
+        ) %>%
+        as_tibble() %>%
+        select(-value)
+    
+    # Forecast List
+    nms <- c("pageViews", "organicSearches")
+
+    forecast_list <- bind_rows(
+            train_tbl, 
+            future_tbl
+        ) %>%
+        mutate(.model = ifelse(is.na(.model), "actual", .model) %>%
+                 as_factor()) %>%
+        mutate(search_type = factor(search_type, levels = nms)) %>%
+        group_by(search_type) %>%
+        group_split() %>%
+        set_names(nms)
+    
+    rv$forecast_list <- forecast_list
+    
+}, ignoreNULL = FALSE)
+```
+
+
+
+
+Column {data-width=650 .tabset}
+-----------------------------------------------------------------------
+
+### Forecast Visualizations
+
+```{r}
+# renderPrint({
+#     rv$forecast_list
+# })
+
+
+
+div(
+    class = "row",
+    div(
+        class = "col-md-12",
+        uiOutput("card_1")
+    )
+)
+
+output$card_1 <- renderUI({
+  
+    # req(rv$mae_naive, rv$best_model_tbl)
+    req(input$forecast_horizon, input$page_path_selection)
+
+    
+  
+    info_card(
+        title = "Page Path", 
+        value = input$page_path_selection, 
+        sub_value = str_c("Forecast Horizon: ", input$forecast_horizon, " Days"),
+        main_icon = "chart-line", 
+        sub_icon = "arrow-up", # ifelse(improvement_percent > 0, "arrow-down", "arrow-up"), 
+        bg_color = "primary", 
+        text_color = "primary", 
+        sub_text_color = "success" # ifelse(improvement_percent > 0, "success", "danger").
+    )
+})
+
+output$plot_page_views <- renderPlotly({
+    
+    req(rv$forecast_list)
+    
+    g <- rv$forecast_list$pageViews %>%
+        ggplot(aes(date, .mean, color = .model)) +
+        geom_ribbon(aes(ymin = lo_95, ymax = hi_95), alpha = 0.5, color = "white", fill = "dodgerblue") +
+        geom_line() +
+        # facet_wrap(~ pagePath + search_type, ncol = 1, scales = "free_y") +
+        theme_tq() +
+        scale_color_tq() +
+        labs(x = "", y = "")
+    
+    ggplotly(g) %>%
+        layout(
+            # xaxis = list(rangeslider = list(visible = T)),
+            legend = list(orientation = 'h')
+        )
+})
+
+output$plot_organic_searches <- renderPlotly({
+    
+    req(rv$forecast_list)
+    
+    g <- rv$forecast_list$organicSearches %>%
+        ggplot(aes(date, .mean, color = .model)) +
+        geom_ribbon(aes(ymin = lo_95, ymax = hi_95), alpha = 0.5, color = "white", fill = "dodgerblue") +
+        geom_line() +
+        # facet_wrap(~ pagePath + search_type, ncol = 1, scales = "free_y") +
+        theme_tq() +
+        scale_color_tq() +
+        labs(x = "", y = "")
+    
+    ggplotly(g) %>%
+        layout(
+            # xaxis = list(rangeslider = list(visible = T)),
+            legend = list(orientation = 'h')
+        )
+})
+
+div(
+    class = "row",
+    div(
+        class = "col-sm-12",
+        div(
+            class = "panel",
+            shiny::tabsetPanel(
+              type = "tabs",
+              shiny::tabPanel(title = "Page Views", 
+                              plotlyOutput(outputId = "plot_page_views")),
+              shiny::tabPanel(title = "Organic Searches", plotlyOutput(outputId = "plot_organic_searches"))
+            )
+            # div(class = "panel-heading", h5("Page Views")),
+            # div(class = "panel-body", plotlyOutput(outputId = "plot_page_views")) 
+        )
+    )
+    
+)
+
+```
+
+### Data (Page Views)
+
+```{r}
+h3("Page Views")
+renderDataTable({
+    
+    req(rv$forecast_list)
+    
+    rv$forecast_list$pageViews %>%
+        DT::datatable()
+})
+
+
+```
+
+### Data (Organic Searches)
+
+```{r}
+h3("Organic Searches")
+renderDataTable({
+    
+    req(rv$forecast_list)
+    
+    rv$forecast_list$organicSearches %>%
+        DT::datatable()
+})
+```
+
