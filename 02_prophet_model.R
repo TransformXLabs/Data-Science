@@ -1,8 +1,3 @@
-# LEARNING LAB 31: Google Analytics, Facebook Prophet, & Shiny
-# OBJECTIVE: Forecast User Visits by Page Path
-# 02 - FACEBOOK PROPHET ALGORITHM ----
-
-
 # 1.0 LIBRARIES ----
 
 # Database
@@ -161,24 +156,3 @@ g <- bind_rows(
     labs(x = "", y = "")
 
 ggplotly(g)
-
-
-# 5.0 SUMMARY - WHAT WE DIDN'T LEARN ----
-# - Congrats - We've made a forecast!
-
-# For time series Accuracy is EVERYTHING
-# - Accuracy saves your company a ton of money
-
-# We don't know:
-# 1. How good it is (Time Series Cross Validation)
-# 2. How to improve the model (Feature Engineering & Preprocessing)
-# 3. If there are better models 
-#   - Univariate (ARIMA, ETS, STL, TSLM)
-#   - Machine Learning (TSML-GLM, TSML-Xgboost, TSML-KNN, & 100 others)
-#   - Deep Learning - TSDL-RNN's
-# 4. How to ensemble multiple models (Competition Winning Strategy #1)
-# 5. How to model errors (Competition Winning Strategy #2)
-# 6. Feature-based model selection (Competition Winning Strategy #3)
-# 7. How to use Deep Learning (Competition Winning Strategy #4)
-
-# Advanced Time Series Forecasting (Coming Soon!) 😃😃😃
