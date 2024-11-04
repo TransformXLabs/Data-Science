@@ -48,7 +48,7 @@ ui <- navbarPage(
     theme       = shinytheme("superhero"),
     
     shiny::tabPanel(
-        title = "Employee Attrition Explorer",
+        title = "",
         sidebarLayout(
             # 1.1 Sidebar ----
             sidebarPanel(
