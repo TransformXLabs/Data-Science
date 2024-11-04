@@ -1,8 +1,6 @@
 ---
 title: "Visualizing HR Employee Clusters"
 subtitle: "Using R + Python"
-author: "Business Science"
-date: "4/15/2020"
 output: 
    html_document:
        theme: flatly
@@ -20,9 +18,6 @@ knitr::opts_chunk$set(
 
 
 # Prerequisites (Conda py3.8 Environment)
-
-Follow the article, [_"How to Run Python's Scikit-Learn in R in 5 minutes"_](https://www.business-science.io/learn-r/2020/04/20/setup-python-in-r-with-rmarkdown.html)
-
 - Install the Anaconda Distribution
 
 - Get Python Scikit Learn Setup in R
@@ -346,8 +341,6 @@ cluster_dbscan(X)
 # calls def tsne_embedding()
 tsne_embedding(X) %>% head()
 ```
-
-## Integrate into Shiny App!
 
 ```{r}
 # Bonus #2!!!
