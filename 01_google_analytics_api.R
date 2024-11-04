@@ -1,8 +1,3 @@
-# LEARNING LAB 31: Google Analytics, Facebook Prophet, & Shiny
-# OBJECTIVE: Forecast User Visits by Page Path
-# 01 - GOOGLE ANALYTICS API ----
-
-
 # 1.0 LIBRARIES ----
 
 # API - ACCESS GA
