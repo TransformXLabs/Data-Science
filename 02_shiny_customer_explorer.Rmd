@@ -1,0 +1,226 @@
+---
+title: "Shiny Customer Explorer"
+output: 
+  flexdashboard::flex_dashboard:
+    theme:
+      bg: "#202123"
+      fg: "#B8BCC2"
+      primary: "#EA80FC"
+      base_font: !expr bslib::font_google("Oswald")
+runtime: shiny
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo    = FALSE,
+  message = FALSE, 
+  warning = FALSE
+)
+
+# IMPORTANT NOTE!!!
+# INSTALL DEVELOPMENT VERSION OF RMARKDOWN AND CROSSTALK
+# rmarkdown   * 2.6.6   2021-02-02 [1] Github (rstudio/rmarkdown@d8e7a15)
+# crosstalk   * 1.1.1.9000 2021-02-03 [1] Github (rstudio/crosstalk@4182a36)
+
+# Run These:
+# remotes::install_github("rstudio/rmarkdown")
+# remotes::install_github("rstudio/crosstalk")
+
+library(shiny)
+library(crosstalk)
+library(plotly)
+library(reactable)
+library(DT)
+library(tidyverse)
+library(timetk)
+
+```
+
+
+```{r}
+customer_predictions_tbl <- read_rds("data/customer_predictions_tbl.rds")
+invoice_lines_tbl        <- read_rds("data/invoice_lines_tbl.rds")
+invoices_tbl             <- read_rds("data/invoices_tbl.rds")
+```
+
+
+```{r}
+shared_customers     <- SharedData$new(
+  customer_predictions_tbl, 
+  key   = ~CustomerId,
+  group = "customer_id"
+)
+shared_invoice_lines <- SharedData$new(
+  invoice_lines_tbl, 
+  key   = ~CustomerId,
+  group = "customer_id"
+)
+shared_invoices <- SharedData$new(
+  invoices_tbl, 
+  key   = ~CustomerId,
+  group = "customer_id"
+)
+```
+
+
+
+
+# Customer Exploration
+
+## Column {.sidebar}
+
+#### How it works
+
+__Customer Exploration__ is an important part of knowing:
+
+- who will purchase
+- what they will purchase
+- and, when they will purchase
+
+This app aggregates customer purchasing behavior into a convenient tool. Simply click on Customer Segmentation Visualization to "Drill In" to Purchasing Behavior.
+<hr>
+
+#### Purchase Timeline
+
+```{r}
+# filter_slider(
+#   "bw_adjust", label = "90-Day Purchase Probability:",
+#   sharedData = shared_customers,
+#   column     = ~.pred_1,
+#   min = 0, max = 1, step = 0.1
+# )
+
+plotlyOutput("plotly_3", height = "300px")
+```
+
+
+```{r}
+output$plotly_3 <- renderPlotly({
+  
+  shared_invoices$data(withSelection = TRUE) %>%
+    filter(selected_ | is.na(selected_)) %>%
+    mutate(selected_ = NULL) %>%
+    # group_by(CustomerId) %>%
+    summarize_by_time(InvoiceDate, .by = "month", n = sum(Total)) %>%
+    
+    plot_ly(color = I("black")) %>%
+    # group_by(CustomerId) %>%
+    add_lines(~InvoiceDate, ~n) %>%
+    highlight(
+      on  = "plotly_click",
+      off = "plotly_doubleclick",
+      selectize  = TRUE,
+      # dynamic    = TRUE,
+      persistent = TRUE
+    )
+    
+})
+```
+
+
+
+
+## Column 1
+
+### Customer Segmentation
+
+```{r}
+output$plotly_1 <- renderPlotly({
+
+    plot_ly(
+      data  = shared_customers,
+      x     = ~artist_umap_01,
+      y     = ~artist_umap_02,
+      # z     = ~artist_umap_03,
+      color = ~.pred_1,
+      text  = ~ str_c(
+        "Customer ID: ", CustomerId,
+        "</br>",
+        "Most Recent Purchase: ", inv_most_recent_purchase,
+        "</br>",
+        "Prob. of Purchase in 90-Days: ", round(.pred_1, digits = 2)
+      ), 
+      source = "A"
+    ) %>%
+    add_markers(size = 3) %>%
+    highlight(
+      on  = "plotly_click",
+      off = "plotly_doubleclick",
+      # selectize  = TRUE,
+      # dynamic    = TRUE,
+      persistent = TRUE
+    )
+})
+
+plotlyOutput("plotly_1", height = "500px")
+
+
+```
+
+## Column 2
+
+### Customer Purchase Habits
+
+
+```{r}
+output$plotly_2 <- renderPlotly({
+  
+  shared_invoice_lines$data(withSelection = TRUE) %>%
+    filter(selected_ | is.na(selected_)) %>%
+    mutate(selected_ = NULL) %>%
+    group_by(GenreName, ArtistName) %>%
+    summarize(n = n()) %>%
+    arrange(desc(n)) %>%
+    slice(1:10) %>%
+    
+    plot_ly() %>%
+    add_heatmap(~GenreName, ~ ArtistName, z = ~n) %>%
+    highlight(
+      on  = "plotly_click",
+      off = "plotly_doubleclick",
+      selectize  = TRUE,
+      # dynamic    = TRUE,
+      persistent = TRUE
+    )
+    
+})
+
+plotlyOutput("plotly_2", height = "300px")
+```
+
+
+# Customer Data
+
+## Column 1
+
+### Customer Information
+
+```{r}
+datatable(
+  data      = shared_customers,
+  extensions = 'Buttons',
+  options = list(
+      scrollX = TRUE, 
+      dom     = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel')
+  )
+)
+```
+
+
+## Column 2
+
+### Invoice Information
+
+```{r}
+datatable(
+  data      = shared_invoice_lines,
+  options = list(
+      scrollX = TRUE, 
+      dom     = 'Bfrtip',
+      buttons = c('copy', 'csv', 'excel')
+  )
+)
+```
+
+

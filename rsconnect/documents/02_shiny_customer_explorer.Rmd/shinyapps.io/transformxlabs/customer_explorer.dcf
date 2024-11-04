@@ -1,0 +1,12 @@
+name: customer_explorer
+title: customer_explorer
+username: transformxlabs
+account: transformxlabs
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 12872086
+bundleId: 9163405
+url: https://transformxlabs.shinyapps.io/customer_explorer/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
